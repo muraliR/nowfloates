@@ -1,0 +1,22 @@
+{
+  "name": "nowfloats-scrapper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cheerio": "^0.22.0",
+    "cron": "^1.2.1",
+    "express": "^4.15.2",
+    "kue": "^0.11.5",
+    "mongoose": "^4.9.2",
+    "mongoose-auto-increment": "^5.0.1",
+    "mongoose-unique-validator": "^1.0.5",
+    "request": "^2.81.0",
+    "sleep": "^5.1.0"
+  }
+}
