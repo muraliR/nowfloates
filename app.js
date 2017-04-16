@@ -32,6 +32,8 @@ var citySchema = new Schema({
 	url: { type: String, required: true, unique: true },
 	country: { type: String, required: true },
 	pages: { type: Number },
+	completed: { type: Boolean },
+	current_running_page: {type: Number, default: 0},
     created_at: {type: Date, default: Date.now}
 });
 
@@ -39,6 +41,19 @@ citySchema.plugin(autoIncrement.plugin, { model: 'cities', field: 'city_id', sta
 var City = mongoose.model('cities',citySchema);
 citySchema.plugin(uniqueValidator);
 
+
+var businessSchema = new Schema({
+	name: { type: String, required: true, unique: true},
+	category: { type: String},
+	website: { type: String, required: true, unique: true },
+	phone: { type: String, required: true, unique: true },
+	city: { type: String, required: true },
+    created_at: {type: Date, default: Date.now}
+});
+
+businessSchema.plugin(autoIncrement.plugin, { model: 'business', field: 'business_id', startAt: 1 });
+var Business = mongoose.model('business',businessSchema);
+businessSchema.plugin(uniqueValidator);
 
 
 var pollManagerSchema = new Schema({
@@ -128,66 +143,58 @@ function scrapeCities(country){
 	});
 }
 
-function processCards(){
-	request('https://shops.nowfloats.com/India/Stores-in-Durgapur/', function (error, response, html) {
+function processCards(url,page){
+	request(url, function (error, response, html) {
 	    if (!error && response.statusCode == 200) {
 	        var $ = cheerio.load(html);
 
-	        var pages = 1;
+	        $('.store').each(function(i,elem){
+        		var category = '';
+        		var phone = '';
+        		var business_name = $($(this).find('h3')[0]).text();
+        		var category = $($(this).find('img[alt="category-icon"]')[0]).next('span').text()
 
-	        if($('.pagination-text').length != 0){
-	        	page_text = $($('.pagination-text').next('span')[0]).text();
-	        	page_text = page_text.split('of ')[1];
-	        	pages = parseInt(page_text);
-	        }
+        		if(category != undefined && category != null){
+        			category = category.trim();
+        		}
 
-	        pages = [...Array(pages).keys()];
+        		var phone = $(this).find('.telephone').text();
 
+        		phone = phone.trim();
 
-	        scrapeCards(pages,'https://shops.nowfloats.com/India/Stores-in-Durgapur/');
+        		website_url = $(this).find('.contact-stores a').attr('href');
 
+        		console.log(business_name + '  ' + category + ' ' + phone + website_url);
 
-	        /*pages.forEach(function(page){
-	        	page = page + 1;
-
-	        	$('.store').each(function(i,elem){
-
-	        		var category = '';
-	        		var phone = '';
-
-	        		var business_name = $($(this).find('h3')[0]).text();
-	        		var category = $($(this).find('img[alt="category-icon"]')[0]).next('span').text()
-
-	        		if(category != undefined && category != null){
-	        			category = category.trim();
-	        		}
-
-	        		var phone = $(this).find('.telephone').text();
-
-	        		phone = phone.trim();
-
-	        		website_url = $(this).find('.contact-stores a').attr('href');
-
-	        		console.log(business_name + '  ' + category + ' ' + phone + website_url);
-
-
-	        	})
-
-	        })*/
+        		var newBusiness = new Business({ name: business_name, category: category, phone: phone, website: website_url});
+				newBusiness.save(function(err){
+					if(!err){
+						console.log('PollManager Started!!');		
+					} else {
+						console.log('saved');
+					}
+				});		
+        	})
 	    }
 	});
 }
 
-function scrapeCards(pages,url){
-	pages.forEach(function(page){
+function scrapeCards(cityObj){
+
+
+	processCards(page_url,page);
+
+	var url = cityObj.url;
+
+	var pages = cityObj.pages;
+
+	pagesArray = [...Array(pages).keys()];
+
+
+	pagesArray.forEach(function(page){
 	    page = page + 1;	
-
 	    page_url = url + '?page=' + page;
-
-	    console.log(page_url);
-
-	    /*request(, function (error, response, html) {
-	    }*/
+	    
 	});
 }
 
@@ -223,63 +230,46 @@ function updatePages(cityObj){
 
 
 
-/*Country.findOne({name: 'INDIA'},function(err,cityObj){
-	scrapeCities(cityObj);
-})*/
 
-//updatePages();
 
 
 app.listen('8081');
 console.log('server started');
 
 
-var cronRunner = "*/5 * * * * *";	
-var cronJob = cron.job(cronRunner, function(){
-	console.log(new Date());
-	PollManager.findOne({}, function(err, pollData){
-		var object_id = pollData.object_id;
-		City.findOne({city_id: {$gt: object_id}}).sort({city_id: 1}).exec(function(cityErr, cityObj){
-			if(cityObj != null){
-				updatePages(cityObj);
-				PollManager.update({ object_id: object_id }, { $set: {object_id: cityObj.city_id} }, function(err, updatedResponse){
-				}); 
-			} else {
-				console.log('null');
-				console.log({city_id: {$gt: object_id}});
-			}
-			
-		})	
+City.find({},function(err,cities){
+	cities.forEach(function(city){
+		City.update({city_id: city.city_id},{ $set: {completed: false, current_running_page: 1}}, function(err,updatedResponse){
+			console.log(updatedResponse);
+		});
 	});
-});
-cronJob.start();
-
-/*Country.find({name: {'$ne': 'INDIA' }},function(err,country){
-	console.log(country);
-	scrapeCities(country);
-});*/
+})
 
 
-// var cronRunner = "*/5 * * * * *";	
+
+// City.findOne({city_id: 21132},function(err,city){
+// 	scrapeCards(city);
+// })
+
+// var cronRunner = "*/15 * * * * *";	
 // var cronJob = cron.job(cronRunner, function(){
 // 	console.log(new Date());
-// 	PollManager.findOne({}, function(err, pollData){
+// 	City.findOne({completed: true}, function(err, cityObj){
 // 		var object_id = pollData.object_id;
-// 		Country.findOne({country_id: {$gt: object_id},name: {'$ne': 'INDIA' }}).sort({country_id: 1}).exec(function(cityErr, country){
-// 			if(country != null){
-// 				scrapeCities(country);
-// 				PollManager.update({ object_id: object_id }, { $set: {object_id: country.country_id} }, function(err, updatedResponse){
+// 		City.findOne({city_id: {$gt: object_id}}).sort({city_id: 1}).exec(function(cityErr, cityObj){
+// 			if(cityObj != null){
+// 				updatePages(cityObj);
+// 				PollManager.update({ object_id: object_id }, { $set: {object_id: cityObj.city_id} }, function(err, updatedResponse){
 // 				}); 
 // 			} else {
-// 				console.log('******************');
+// 				console.log('null');
+// 				console.log({city_id: {$gt: object_id}});
 // 			}
 			
 // 		})	
 // 	});
 // });
 // cronJob.start();
-
-
 
 
 exports = module.exports = app;
