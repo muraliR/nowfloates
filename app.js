@@ -43,9 +43,9 @@ citySchema.plugin(uniqueValidator);
 
 
 var businessSchema = new Schema({
-	name: { type: String, required: true, unique: true},
+	name: { type: String, required: true},
 	category: { type: String},
-	website: { type: String, required: true, unique: true },
+	website: { type: String, required: true},
 	phone: { type: String, required: true, unique: true },
 	city: { type: String, required: true },
     created_at: {type: Date, default: Date.now}
@@ -143,7 +143,8 @@ function scrapeCities(country){
 	});
 }
 
-function processCards(url,page){
+function processCards(url,city,callback){
+	console.log(url);
 	request(url, function (error, response, html) {
 	    if (!error && response.statusCode == 200) {
 	        var $ = cheerio.load(html);
@@ -166,15 +167,16 @@ function processCards(url,page){
 
         		console.log(business_name + '  ' + category + ' ' + phone + website_url);
 
-        		var newBusiness = new Business({ name: business_name, category: category, phone: phone, website: website_url});
+        		var newBusiness = new Business({ name: business_name, category: category, phone: phone, website: website_url,city:city});
 				newBusiness.save(function(err){
 					if(!err){
-						console.log('PollManager Started!!');		
-					} else {
 						console.log('saved');
+					} else {
+						console.log(err);
 					}
 				});		
         	})
+        	callback({});
 	    }
 	});
 }
@@ -182,20 +184,6 @@ function processCards(url,page){
 function scrapeCards(cityObj){
 
 
-	processCards(page_url,page);
-
-	var url = cityObj.url;
-
-	var pages = cityObj.pages;
-
-	pagesArray = [...Array(pages).keys()];
-
-
-	pagesArray.forEach(function(page){
-	    page = page + 1;	
-	    page_url = url + '?page=' + page;
-	    
-	});
 }
 
 
@@ -229,21 +217,17 @@ function updatePages(cityObj){
 }
 
 
-
-
-
-
 app.listen('8083');
 console.log('server started');
 
 
-City.find({},function(err,cities){
+/*City.find({},function(err,cities){
 	cities.forEach(function(city){
 		City.update({city_id: city.city_id},{ $set: {completed: false, current_running_page: 1}}, function(err,updatedResponse){
 			console.log(updatedResponse);
 		});
 	});
-})
+})*/
 
 
 
@@ -251,25 +235,29 @@ City.find({},function(err,cities){
 // 	scrapeCards(city);
 // })
 
-// var cronRunner = "*/15 * * * * *";	
-// var cronJob = cron.job(cronRunner, function(){
-// 	console.log(new Date());
-// 	City.findOne({completed: true}, function(err, cityObj){
-// 		var object_id = pollData.object_id;
-// 		City.findOne({city_id: {$gt: object_id}}).sort({city_id: 1}).exec(function(cityErr, cityObj){
-// 			if(cityObj != null){
-// 				updatePages(cityObj);
-// 				PollManager.update({ object_id: object_id }, { $set: {object_id: cityObj.city_id} }, function(err, updatedResponse){
-// 				}); 
-// 			} else {
-// 				console.log('null');
-// 				console.log({city_id: {$gt: object_id}});
-// 			}
-			
-// 		})	
-// 	});
-// });
-// cronJob.start();
+var cronRunner = "*/40 * * * * *";	
+var cronJob = cron.job(cronRunner, function(){
+	console.log(new Date());
+	City.findOne({completed: false}, function(err, cityObj){
+		if(cityObj != null){
+			var page_url = cityObj.url + '?page=' + cityObj.current_running_page;	
+			processCards(page_url,cityObj.name,function(data){
+				var current_running_page = cityObj.current_running_page + 1;
+				if(current_running_page > cityObj.pages){
+					City.update({city_id: cityObj.city_id},{ $set: {completed: true}}, function(err,updatedResponse){
+						//console.log(updatedResponse);
+					});			
+				} else {
+					City.update({city_id: cityObj.city_id},{ $set: {current_running_page: current_running_page}}, function(err,updatedResponse){
+						//console.log(updatedResponse);
+					});			
+				}
+			});
+		}
+	});
+});
+cronJob.start();
+
 
 
 exports = module.exports = app;
