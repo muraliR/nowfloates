@@ -144,39 +144,42 @@ function scrapeCities(country){
 }
 
 function processCards(url,city,callback){
-	console.log(url);
 	request(url, function (error, response, html) {
 	    if (!error && response.statusCode == 200) {
 	        var $ = cheerio.load(html);
 
-	        $('.store').each(function(i,elem){
-        		var category = '';
-        		var phone = '';
-        		var business_name = $($(this).find('h3')[0]).text();
-        		var category = $($(this).find('img[alt="category-icon"]')[0]).next('span').text()
+	        if($('.store').length == 0){
+	        	callback({ empty:true });
+	        } else {
+	        	$('.store').each(function(i,elem){
+	        		var category = '';
+	        		var phone = '';
+	        		var business_name = $($(this).find('h3')[0]).text();
+	        		var category = $($(this).find('img[alt="category-icon"]')[0]).next('span').text()
 
-        		if(category != undefined && category != null){
-        			category = category.trim();
-        		}
+	        		if(category != undefined && category != null){
+	        			category = category.trim();
+	        		}
 
-        		var phone = $(this).find('.telephone').text();
+	        		var phone = $(this).find('.telephone').text();
 
-        		phone = phone.trim();
+	        		phone = phone.trim();
 
-        		website_url = $(this).find('.contact-stores a').attr('href');
+	        		website_url = $(this).find('.contact-stores a').attr('href');
 
-        		console.log(business_name + '  ' + category + ' ' + phone + website_url);
+	        		console.log(business_name + '  ' + category + ' ' + phone + website_url);
 
-        		var newBusiness = new Business({ name: business_name, category: category, phone: phone, website: website_url,city:city});
-				newBusiness.save(function(err){
-					if(!err){
-						console.log('saved');
-					} else {
-						console.log(err);
-					}
-				});		
-        	})
-        	callback({});
+	        		var newBusiness = new Business({ name: business_name, category: category, phone: phone, website: website_url,city:city});
+					newBusiness.save(function(err){
+						if(!err){
+							console.log('saved');
+						} else {
+							console.log(err);
+						}
+					});		
+	        	})
+	        	callback({});
+	        }
 	    }
 	});
 }
@@ -243,7 +246,7 @@ var cronJob = cron.job(cronRunner, function(){
 			var page_url = cityObj.url + '?page=' + cityObj.current_running_page;	
 			processCards(page_url,cityObj.name,function(data){
 				var current_running_page = cityObj.current_running_page + 1;
-				if(current_running_page > cityObj.pages){
+				if(current_running_page > cityObj.pages || data.empty == true){
 					City.update({city_id: cityObj.city_id},{ $set: {completed: true}}, function(err,updatedResponse){
 						//console.log(updatedResponse);
 					});			
