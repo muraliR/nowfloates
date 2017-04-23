@@ -144,6 +144,7 @@ function scrapeCities(country){
 }
 
 function processCards(url,city,callback){
+	console.log(url);
 	request(url, function (error, response, html) {
 	    if (!error && response.statusCode == 200) {
 	        var $ = cheerio.load(html);
