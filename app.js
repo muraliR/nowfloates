@@ -181,6 +181,8 @@ function processCards(url,city,callback){
 	        	})
 	        	callback({});
 	        }
+	    } else {
+	    	callback({ empty:true });
 	    }
 	});
 }
