@@ -12,11 +12,14 @@
     "cheerio": "^0.22.0",
     "cron": "^1.2.1",
     "express": "^4.15.2",
+    "js-object-pretty-print": "^0.3.0",
     "kue": "^0.11.5",
     "mongoose": "^4.9.2",
     "mongoose-auto-increment": "^5.0.1",
     "mongoose-unique-validator": "^1.0.5",
+    "node-fetch": "^1.6.3",
     "request": "^2.81.0",
-    "sleep": "^5.1.0"
+    "sleep": "^5.1.0",
+    "web-auto-extractor": "^1.0.15"
   }
 }
