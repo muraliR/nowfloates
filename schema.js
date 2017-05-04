@@ -52,6 +52,7 @@ var businessSchema = new Schema({
     created_at: {type: Date, default: Date.now},
     contact_details: {type: Schema.Types.Mixed},
     contact_details_added: Boolean,
+    schemaExists: Boolean,
     schemaData: {type: Schema.Types.Mixed}
 });
 
@@ -124,6 +125,9 @@ function fetchSchema(business){
 
 	//'http://narayaniheights.in'
 
+
+	console.log('-------- Requesting ---' + business.website + ' ---------------');
+
 	request(business.website, function (error, response, body) {
 	    if (!error && response.statusCode == 200) {
 	    	var parsed = WAE().parse(body);
@@ -155,14 +159,19 @@ function fetchSchema(business){
 
 					console.log(contact_details);
 
-					var updateData = {contact_details : contact_details, contact_details_added : true, schemaData: localBusinessData}
+					var updateData = {contact_details : contact_details, contact_details_added : true, schemaData: localBusinessData, schemaExists: true}
 
 					Business.update({ business_id: business.business_id }, { $set: updateData }, function(err, updatedResponse){
 						console.log('------- Updated ------------' + business.business_id);
 					}); 
 				}
 			} else {
-				console.log('++');
+				console.log('++ Schema Not Exists ++');
+				var updateData = {contact_details_added : true, schemaExists: false}
+
+				Business.update({ business_id: business.business_id }, { $set: updateData }, function(err, updatedResponse){
+					console.log('------- Updated ------------' + business.business_id);
+				}); 
 			}
 	    }
 	});
