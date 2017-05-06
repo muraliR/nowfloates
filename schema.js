@@ -173,6 +173,13 @@ function fetchSchema(business){
 					console.log('------- Updated ------------' + business.business_id);
 				}); 
 			}
+	    } else {
+	    	console.log('++ Webiste not Working ++');
+			var updateData = {contact_details_added : true, schemaExists: false}
+
+			Business.update({ business_id: business.business_id }, { $set: updateData }, function(err, updatedResponse){
+				console.log('------- Updated ------------' + business.business_id);
+			}); 
 	    }
 	});
 
